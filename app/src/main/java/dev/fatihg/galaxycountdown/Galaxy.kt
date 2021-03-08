@@ -61,7 +61,8 @@ private fun drawGalaxy(
                 drawScope = drawScope,
                 shiftValue = planetAnimatable.value,
                 shiftFactor = planetRandomizer.centerShiftFactor,
-                centerOffsetFactor = planetRandomizer.centerOffsetFactor
+                centerOffsetXFactor = planetRandomizer.centerOffsetXFactor,
+                centerOffsetYFactor = planetRandomizer.centerOffsetYFactor
             ),
             color = planetRandomizer.color,
             alpha = planetRandomizer.alpha,
@@ -96,7 +97,8 @@ private fun getRandomPointInGalaxy(
     drawScope: DrawScope,
     shiftValue: Float,
     shiftFactor: Float,
-    centerOffsetFactor: Float
+    centerOffsetXFactor: Float,
+    centerOffsetYFactor: Float
 ): Offset {
     val shiftX = shiftValue * shiftFactor
 
@@ -107,8 +109,8 @@ private fun getRandomPointInGalaxy(
     val shiftY = shiftValue / shiftFactor
 
     return Offset(
-        x = centerOffsetFactor * drawScope.size.width + shiftX,
-        y = centerOffsetFactor * drawScope.size.height + shiftY
+        x = centerOffsetXFactor * drawScope.size.width + shiftX,
+        y = centerOffsetYFactor * drawScope.size.height + shiftY
     )
 }
 
@@ -153,7 +155,8 @@ private fun generateRandomPlanetDataset(
         for (i in 0..planetData.numberOfPlanet) {
             add(
                 PlanetRandomizer(
-                    centerOffsetFactor = (0..100).random() / 100f,
+                    centerOffsetXFactor = (0..100).random() / 100f,
+                    centerOffsetYFactor = (0..100).random() / 100f,
                     centerShiftFactor = getRandomSin(),
                     radius = getRandomPlanetRadius(planetData.maxPlanetRadius),
                     color = getRandomPlanetColor(),
@@ -176,7 +179,8 @@ private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 60000, easing =
  * Keeps values for randomization
  */
 data class PlanetRandomizer(
-    val centerOffsetFactor: Float,
+    val centerOffsetXFactor: Float,
+    val centerOffsetYFactor: Float,
     val centerShiftFactor: Float,
     val radius: Float,
     val color: Color,
