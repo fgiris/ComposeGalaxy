@@ -14,12 +14,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.sin
 
+@ExperimentalStdlibApi
 @Composable
 fun Galaxy(
     modifier: Modifier = Modifier,
     planetData: PlanetData = PlanetData(),
     planetAnimationSpec: AnimationSpec<Float> = DefaultTweenSpec
 ) {
+    val planetRandomizers = remember {
+        generateRandomPlanetDataset(
+            planetData = planetData
+        )
+    }
+
     val planetAnimationScope = rememberCoroutineScope()
     val planetAnimatable = remember {
         Animatable(0f)
@@ -33,7 +40,8 @@ fun Galaxy(
                 planetData = planetData,
                 planetAnimatable = planetAnimatable,
                 planetAnimationScope = planetAnimationScope,
-                planetAnimationSpec = planetAnimationSpec
+                planetAnimationSpec = planetAnimationSpec,
+                planetRandomizers = planetRandomizers
             )
         }
     )
@@ -44,18 +52,19 @@ private fun drawGalaxy(
     planetData: PlanetData,
     planetAnimatable: Animatable<Float, AnimationVector1D>,
     planetAnimationScope: CoroutineScope,
-    planetAnimationSpec: AnimationSpec<Float>
+    planetAnimationSpec: AnimationSpec<Float>,
+    planetRandomizers: List<PlanetRandomizer>
 ) {
     // Draw all planets
-    for (i in 0..planetData.numberOfPlanet) {
+    for (planetRandomizer in planetRandomizers) {
         drawPlanet(
-            radius = getRandomPlanetRadius(planetData.maxPlanetRadius),
+            radius = planetRandomizer.radius,
             center = getRandomPointInGalaxy(
                 drawScope = drawScope,
                 shiftValue = planetAnimatable.value
             ),
-            color = getRandomPlanetColor(),
-            alpha = getRandomPlanetAlpha(planetData.maxPlanetAlpha),
+            color = planetRandomizer.color,
+            alpha = planetRandomizer.alpha,
             drawScope = drawScope
         )
 
@@ -95,7 +104,7 @@ private fun getRandomPointInGalaxy(
 
     return Offset(
         x = (0..100).random() / 100f * drawScope.size.width + shiftX,
-        y = (0..100).random() / 100f* drawScope.size.height + shiftY
+        y = (0..100).random() / 100f * drawScope.size.height + shiftY
     )
 }
 
@@ -132,6 +141,25 @@ private fun movePlanet(
     }
 }
 
+@ExperimentalStdlibApi
+private fun generateRandomPlanetDataset(
+    planetData: PlanetData
+): List<PlanetRandomizer> {
+    return buildList {
+        for (i in 0..planetData.numberOfPlanet) {
+            add(
+                PlanetRandomizer(
+                    centerOffsetFactor = (0..100).random() / 100f,
+                    centerShiftFactor = getRandomSin(),
+                    radius = getRandomPlanetRadius(planetData.maxPlanetRadius),
+                    color = getRandomPlanetColor(),
+                    alpha = getRandomPlanetAlpha(planetData.maxPlanetAlpha)
+                )
+            )
+        }
+    }
+}
+
 private val planetColors = listOf(
     Color.LightGray,
     Color.Gray,
@@ -139,3 +167,14 @@ private val planetColors = listOf(
 )
 
 private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 60000, easing = LinearEasing)
+
+/**
+ * Keeps values for randomization
+ */
+data class PlanetRandomizer(
+    val centerOffsetFactor: Float,
+    val centerShiftFactor: Float,
+    val radius: Float,
+    val color: Color,
+    val alpha: Float
+)
