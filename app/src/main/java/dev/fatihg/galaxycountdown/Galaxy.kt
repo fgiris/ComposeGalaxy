@@ -37,7 +37,6 @@ fun Galaxy(
         onDraw = {
             drawGalaxy(
                 drawScope = this,
-                planetData = planetData,
                 planetAnimatable = planetAnimatable,
                 planetAnimationScope = planetAnimationScope,
                 planetAnimationSpec = planetAnimationSpec,
@@ -49,7 +48,6 @@ fun Galaxy(
 
 private fun drawGalaxy(
     drawScope: DrawScope,
-    planetData: PlanetData,
     planetAnimatable: Animatable<Float, AnimationVector1D>,
     planetAnimationScope: CoroutineScope,
     planetAnimationSpec: AnimationSpec<Float>,
@@ -61,7 +59,9 @@ private fun drawGalaxy(
             radius = planetRandomizer.radius,
             center = getRandomPointInGalaxy(
                 drawScope = drawScope,
-                shiftValue = planetAnimatable.value
+                shiftValue = planetAnimatable.value,
+                shiftFactor = planetRandomizer.centerShiftFactor,
+                centerOffsetFactor = planetRandomizer.centerOffsetFactor
             ),
             color = planetRandomizer.color,
             alpha = planetRandomizer.alpha,
@@ -94,17 +94,21 @@ private fun drawPlanet(
 
 private fun getRandomPointInGalaxy(
     drawScope: DrawScope,
-    shiftValue: Float
+    shiftValue: Float,
+    shiftFactor: Float,
+    centerOffsetFactor: Float
 ): Offset {
-    val randomSin = getRandomSin()
-    val randomCos = 1 / randomSin
+    val shiftX = shiftValue * shiftFactor
 
-    val shiftX = shiftValue * randomSin
-    val shiftY = shiftValue * randomCos
+    // Since the shift factor is generated with sin(), 1 / shiftFactor
+    // will be in direct proportional to cos(). You probably need to
+    // implement in a better way in case the shift factor is generated
+    // with some other function than sin()
+    val shiftY = shiftValue / shiftFactor
 
     return Offset(
-        x = (0..100).random() / 100f * drawScope.size.width + shiftX,
-        y = (0..100).random() / 100f * drawScope.size.height + shiftY
+        x = centerOffsetFactor * drawScope.size.width + shiftX,
+        y = centerOffsetFactor * drawScope.size.height + shiftY
     )
 }
 
