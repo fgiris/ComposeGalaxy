@@ -66,7 +66,8 @@ private fun drawGalaxy(
                 centerOffsetXFactor = planetRandomizer.centerOffsetXFactor,
                 centerOffsetYFactor = planetRandomizer.centerOffsetYFactor,
                 diagonal = diagonal,
-                randomAngleInRadians = planetRandomizer.randomAngleInRadians
+                randomAngleInRadians = planetRandomizer.randomAngleInRadians,
+                shiftValue = planetAnimatable.value
             ),
             color = planetRandomizer.color,
             alpha = planetRandomizer.alpha,
@@ -77,7 +78,8 @@ private fun drawGalaxy(
             animatable = planetAnimatable,
             animationSpec = planetAnimationSpec,
             animationScope = planetAnimationScope,
-            replacementValue = drawScope.size.maxDimension
+            // This will make sure that planet will go out of screen
+            replacementValue = 2 * diagonal
         )
     }
 }
@@ -102,7 +104,8 @@ private fun getRandomPointOutsideGalaxy(
     centerOffsetXFactor: Float,
     centerOffsetYFactor: Float,
     diagonal: Float,
-    randomAngleInRadians: Float
+    randomAngleInRadians: Float,
+    shiftValue: Float
 ): Offset {
     // We will first pick a random point inside the screen and
     // move it outside of the screen by adding a factor of diagonal
@@ -118,9 +121,14 @@ private fun getRandomPointOutsideGalaxy(
     val replacementX = diagonal * sin(randomAngleInRadians)
     val replacementY = diagonal * cos(randomAngleInRadians)
 
+    // We will calculate the shift value for each coordinate by
+    // using the same coefficient used for replacement value.
+    val shiftValueX = shiftValue * -sin(randomAngleInRadians)
+    val shiftValueY = shiftValue * -cos(randomAngleInRadians)
+
     return Offset(
-        x =  randomXInGalaxy + replacementX,
-        y = randomYInGalaxy  + replacementY
+        x =  randomXInGalaxy + replacementX + shiftValueX,
+        y = randomYInGalaxy  + replacementY + shiftValueY
     )
 }
 
@@ -194,7 +202,7 @@ private val planetColors = listOf(
     Color.DarkGray
 )
 
-private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 60000, easing = LinearEasing)
+private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 10000, easing = LinearOutSlowInEasing)
 
 /**
  * Keeps values for randomization
