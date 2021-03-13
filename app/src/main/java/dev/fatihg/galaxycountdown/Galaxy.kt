@@ -12,6 +12,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import dev.fatihg.galaxycountdown.data.PlanetData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.sin
 
 @ExperimentalStdlibApi
@@ -53,16 +55,18 @@ private fun drawGalaxy(
     planetAnimationSpec: AnimationSpec<Float>,
     planetRandomizers: List<PlanetRandomizer>
 ) {
+    val diagonal = hypot(drawScope.size.width, drawScope.size.height)
+
     // Draw all planets
     for (planetRandomizer in planetRandomizers) {
         drawPlanet(
             radius = planetRandomizer.radius,
-            center = getRandomPointInGalaxy(
+            center = getRandomPointOutsideGalaxy(
                 drawScope = drawScope,
-                shiftValue = planetAnimatable.value,
-                shiftFactor = planetRandomizer.centerShiftFactor,
                 centerOffsetXFactor = planetRandomizer.centerOffsetXFactor,
-                centerOffsetYFactor = planetRandomizer.centerOffsetYFactor
+                centerOffsetYFactor = planetRandomizer.centerOffsetYFactor,
+                diagonal = diagonal,
+                randomAngleInRadians = planetRandomizer.randomAngleInRadians
             ),
             color = planetRandomizer.color,
             alpha = planetRandomizer.alpha,
@@ -93,24 +97,30 @@ private fun drawPlanet(
     )
 }
 
-private fun getRandomPointInGalaxy(
+private fun getRandomPointOutsideGalaxy(
     drawScope: DrawScope,
-    shiftValue: Float,
-    shiftFactor: Float,
     centerOffsetXFactor: Float,
-    centerOffsetYFactor: Float
+    centerOffsetYFactor: Float,
+    diagonal: Float,
+    randomAngleInRadians: Float
 ): Offset {
-    val shiftX = shiftValue * shiftFactor
+    // We will first pick a random point inside the screen and
+    // move it outside of the screen by adding a factor of diagonal
+    val randomXInGalaxy = centerOffsetXFactor * drawScope.size.width
+    val randomYInGalaxy = centerOffsetYFactor * drawScope.size.height
 
-    // Since the shift factor is generated with sin(), 1 / shiftFactor
-    // will be in direct proportional to cos(). You probably need to
-    // implement in a better way in case the shift factor is generated
-    // with some other function than sin()
-    val shiftY = shiftValue / shiftFactor
+    // Replacement values are added to the random x and y.
+    // The hypot(replacementX, replacementY) will always be diagonal in order
+    // to move the random point by the diagonal.
+    // To give a rotation, we will use a coefficient
+    // x: sin(randomAngle)
+    // y: cos(randomAngle)
+    val replacementX = diagonal * sin(randomAngleInRadians)
+    val replacementY = diagonal * cos(randomAngleInRadians)
 
     return Offset(
-        x = centerOffsetXFactor * drawScope.size.width + shiftX,
-        y = centerOffsetYFactor * drawScope.size.height + shiftY
+        x =  randomXInGalaxy + replacementX,
+        y = randomYInGalaxy  + replacementY
     )
 }
 
@@ -155,8 +165,9 @@ private fun generateRandomPlanetDataset(
         for (i in 0..planetData.numberOfPlanet) {
             add(
                 PlanetRandomizer(
-                    centerOffsetXFactor = (0..100).random() / 100f,
-                    centerOffsetYFactor = (0..100).random() / 100f,
+                    centerOffsetXFactor = (0..1).random().toFloat(),
+                    centerOffsetYFactor = (0..1).random().toFloat(),
+                    randomAngleInRadians = generateRandomAngle(),
                     centerShiftFactor = getRandomSin(),
                     radius = getRandomPlanetRadius(planetData.maxPlanetRadius),
                     color = getRandomPlanetColor(),
@@ -165,6 +176,16 @@ private fun generateRandomPlanetDataset(
             )
         }
     }
+}
+
+private fun generateRandomAngle(): Float {
+    // Generate an angle in radians between (0, 2 * PI)
+    return Math.toRadians((0..360).random().toDouble()).toFloat()
+}
+
+private fun getRandomCenterOffsetFactor(): Int {
+    // In order to create random points which are
+    return listOf(0, 1).random()
 }
 
 private val planetColors = listOf(
@@ -181,6 +202,7 @@ private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 60000, easing =
 data class PlanetRandomizer(
     val centerOffsetXFactor: Float,
     val centerOffsetYFactor: Float,
+    val randomAngleInRadians: Float,
     val centerShiftFactor: Float,
     val radius: Float,
     val color: Color,
