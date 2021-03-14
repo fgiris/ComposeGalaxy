@@ -1,17 +1,17 @@
 package dev.fatihg.galaxycountdown
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import dev.fatihg.galaxycountdown.data.PlanetData
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
@@ -20,8 +20,7 @@ import kotlin.math.sin
 @Composable
 fun Galaxy(
     modifier: Modifier = Modifier,
-    planetData: PlanetData = PlanetData(),
-    planetAnimationSpec: DurationBasedAnimationSpec<Float> = DefaultTweenSpec
+    planetData: PlanetData = PlanetData()
 ) {
     val planetRandomizers = remember {
         generateRandomPlanetDataset(
@@ -31,11 +30,11 @@ fun Galaxy(
 
     val infiniteTransition = rememberInfiniteTransition()
 
-    val planetShiftFactor = infiniteTransition.animateFloat(
+    val planetShiftAnimation = infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = planetAnimationSpec,
+            animation = planetData.planetAnimationSpec,
             repeatMode = RepeatMode.Reverse
         )
     )
@@ -46,7 +45,7 @@ fun Galaxy(
             drawGalaxy(
                 drawScope = this,
                 planetRandomizers = planetRandomizers,
-                shiftFactor = planetShiftFactor.value
+                shiftAnimationValue = planetShiftAnimation.value
             )
         }
     )
@@ -55,10 +54,10 @@ fun Galaxy(
 private fun drawGalaxy(
     drawScope: DrawScope,
     planetRandomizers: List<PlanetRandomizer>,
-    shiftFactor: Float
+    shiftAnimationValue: Float
 ) {
     val diagonal = hypot(drawScope.size.width, drawScope.size.height)
-    val planetShiftValue = 2 * diagonal * shiftFactor
+    val planetShiftValue = diagonal * shiftAnimationValue
 
     // Draw all planets
     for (planetRandomizer in planetRandomizers) {
@@ -66,10 +65,7 @@ private fun drawGalaxy(
             radius = planetRandomizer.radius,
             center = getRandomPointOutsideGalaxy(
                 drawScope = drawScope,
-                centerOffsetXFactor = planetRandomizer.centerOffsetXFactor,
-                centerOffsetYFactor = planetRandomizer.centerOffsetYFactor,
-                diagonal = diagonal,
-                randomAngleInRadians = planetRandomizer.randomAngleInRadians,
+                planetCoefficientsData = planetRandomizer.planetCoefficientsData,
                 shiftValue = planetShiftValue
             ),
             color = planetRandomizer.color,
@@ -96,54 +92,21 @@ private fun drawPlanet(
 
 private fun getRandomPointOutsideGalaxy(
     drawScope: DrawScope,
-    centerOffsetXFactor: Float,
-    centerOffsetYFactor: Float,
-    diagonal: Float,
-    randomAngleInRadians: Float,
+    planetCoefficientsData: PlanetCoefficientsData,
     shiftValue: Float
 ): Offset {
     // We will first pick a random point inside the screen and
     // move it outside of the screen by adding a factor of diagonal
-    val randomXInGalaxy = centerOffsetXFactor * drawScope.size.width
-    val randomYInGalaxy = centerOffsetYFactor * drawScope.size.height
+    val randomXInGalaxy = planetCoefficientsData.coefficientX * drawScope.size.width
+    val randomYInGalaxy = planetCoefficientsData.coefficientY * drawScope.size.height
 
-    // Replacement values are added to the random x and y.
-    // The hypot(replacementX, replacementY) will always be diagonal in order
-    // to move the random point by the diagonal.
-    // To give a rotation, we will use a coefficient
-    // x: sin(randomAngle)
-    // y: cos(randomAngle)
-    val replacementX = diagonal * sin(randomAngleInRadians)
-    val replacementY = diagonal * cos(randomAngleInRadians)
-
-    // We will calculate the shift value for each coordinate by
-    // using the same coefficient used for replacement value.
-    val shiftValueX = shiftValue * -sin(randomAngleInRadians)
-    val shiftValueY = shiftValue * -cos(randomAngleInRadians)
+    val shiftValueX = shiftValue * sin(planetCoefficientsData.shiftAngle)
+    val shiftValueY = shiftValue * cos(planetCoefficientsData.shiftAngle)
 
     return Offset(
-        x =  randomXInGalaxy + replacementX + shiftValueX,
-        y = randomYInGalaxy  + replacementY + shiftValueY
+        x = randomXInGalaxy + shiftValueX,
+        y = randomYInGalaxy + shiftValueY
     )
-}
-
-private fun getRandomPlanetRadius(
-    maxRadius: Float
-): Float {
-    return (0..100).random() / 100f * maxRadius
-}
-
-private fun getRandomPlanetAlpha(
-    maxAlpha: Float
-): Float {
-    return (0..100).random() / 100f * maxAlpha
-}
-
-private fun getRandomPlanetColor() = planetColors.random()
-
-private fun getRandomSin(): Float {
-    val randomAngle = (0..360).random().toDouble()
-    return sin(Math.toRadians(randomAngle)).toFloat()
 }
 
 @ExperimentalStdlibApi
@@ -154,41 +117,128 @@ private fun generateRandomPlanetDataset(
         for (i in 0..planetData.numberOfPlanet) {
             add(
                 PlanetRandomizer(
-                    centerOffsetXFactor = (0..100).random() / 100f,
-                    centerOffsetYFactor = (0..100).random() / 100f,
-                    randomAngleInRadians = generateRandomAngle(),
-                    centerShiftFactor = getRandomSin(),
-                    radius = getRandomPlanetRadius(planetData.maxPlanetRadius),
-                    color = getRandomPlanetColor(),
-                    alpha = getRandomPlanetAlpha(planetData.maxPlanetAlpha)
+                    planetCoefficientsData = generateRandomCoefficients(),
+                    planetData = planetData
                 )
             )
         }
     }
 }
 
-private fun generateRandomAngle(): Float {
-    // Generate an angle in radians between (0, 2 * PI)
-    return Math.toRadians((0..360).random().toDouble()).toFloat()
+private fun generateRandomCoefficients(): PlanetCoefficientsData {
+
+    // These coefficients will be randomly selected for x and y
+    // For instance if coefficient x is the first one then coefficient
+    // for the y will be second one. This is to generate random offsets
+    // which is maxPlanetRadius distance away from the screen edge
+    val firstRandomCoefficient = (0..100).random() / 100f
+
+    // Shifting coefficients by 0.1f will make the planet itself will not
+    // be visible at the starting point which will be drawn outside of the
+    // screen
+    val secondRandomCoefficient = listOf(
+        0f - 0.1f,
+        1f + 0.1f
+    ).random()
+
+    val shuffledCoefficientList = listOf(
+        firstRandomCoefficient,
+        secondRandomCoefficient
+    ).shuffled()
+
+    val coefficientX = shuffledCoefficientList.first()
+    val coefficientY = shuffledCoefficientList.last()
+
+    val shiftCoefficient = generateRandomAngleForShiftCoefficient(
+        coefficientX = coefficientX,
+        coefficientY = coefficientY
+    )
+
+    return PlanetCoefficientsData(
+        coefficientX = coefficientX,
+        coefficientY = coefficientY,
+        shiftAngle = shiftCoefficient
+    )
 }
 
-private val planetColors = listOf(
-    Color.LightGray,
-    Color.Gray,
-    Color.DarkGray
-)
+/**
+ * Shift coefficient will be used to scale the shift value used to move the planet.
+ * It is important to move the planet (which will firstly be placed outside of the screen)
+ * towards the screen.
+ */
+private fun generateRandomAngleForShiftCoefficient(
+    coefficientX: Float,
+    coefficientY: Float
+): Float {
+    // Random angle (0, PI)
+    val randomAngle = generateRandomAngle(range = (0..180))
 
-private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 10000, easing = LinearEasing)
+    return when {
+        coefficientX > 1f -> {
+            // Bottom to the bottom of the screen
+
+            // Rotate by 180deg
+            randomAngle + 180
+        }
+        coefficientX < 0f -> {
+            // Top to the top of the screen
+
+            // No need any rotation
+            randomAngle
+        }
+        coefficientY > 1f -> {
+            // Right to the right of the screen
+
+            // Rotate by 90deg
+            randomAngle + 90
+        }
+        coefficientY < 0f -> {
+            // Left to the left of the screen
+
+            // Rotate by -90deg
+            randomAngle - 90
+        }
+        else -> throw IllegalStateException(
+            "One of the coefficients must satify the " +
+                    "above conditions"
+        )
+    }
+}
+
+private fun generateRandomAngle(range: IntRange): Float {
+    return Math.toRadians(
+        range.random().toDouble()
+    ).toFloat()
+}
 
 /**
  * Keeps values for randomization
  */
 data class PlanetRandomizer(
-    val centerOffsetXFactor: Float,
-    val centerOffsetYFactor: Float,
-    val randomAngleInRadians: Float,
-    val centerShiftFactor: Float,
-    val radius: Float,
-    val color: Color,
-    val alpha: Float
+    val planetCoefficientsData: PlanetCoefficientsData,
+    private val planetData: PlanetData
+) {
+    val radius: Float = getRandomPlanetRadius(planetData.maxPlanetRadius)
+    val alpha: Float = getRandomPlanetAlpha(planetData.maxPlanetAlpha)
+    val color: Color = getRandomPlanetColor(planetData.planetColors)
+
+    private fun getRandomPlanetRadius(
+        maxRadius: Float
+    ): Float {
+        return (0..100).random() / 100f * maxRadius
+    }
+
+    private fun getRandomPlanetAlpha(
+        maxAlpha: Float
+    ): Float {
+        return (0..100).random() / 100f * maxAlpha
+    }
+
+    private fun getRandomPlanetColor(planetColors: List<Color>) = planetColors.random()
+}
+
+data class PlanetCoefficientsData(
+    val coefficientX: Float,
+    val coefficientY: Float,
+    val shiftAngle: Float
 )
