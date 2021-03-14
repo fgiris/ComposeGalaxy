@@ -57,16 +57,18 @@ private fun drawGalaxy(
     shiftAnimationValue: Float
 ) {
     val diagonal = hypot(drawScope.size.width, drawScope.size.height)
-    val planetShiftValue = diagonal * shiftAnimationValue
 
     // Draw all planets
-    for (planetRandomizer in planetRandomizers) {
+    planetRandomizers.forEachIndexed { index, planetRandomizer ->
         drawPlanet(
             radius = planetRandomizer.radius,
             center = getRandomPointOutsideGalaxy(
                 drawScope = drawScope,
                 planetCoefficientsData = planetRandomizer.planetCoefficientsData,
-                shiftValue = planetShiftValue
+                shiftAnimationValue = shiftAnimationValue,
+                diagonal = diagonal,
+                // Half is starting from reverse the other half is not
+                isStaringFromReverse = index < (planetRandomizers.size / 2)
             ),
             color = planetRandomizer.color,
             alpha = planetRandomizer.alpha,
@@ -93,15 +95,28 @@ private fun drawPlanet(
 private fun getRandomPointOutsideGalaxy(
     drawScope: DrawScope,
     planetCoefficientsData: PlanetCoefficientsData,
-    shiftValue: Float
+    shiftAnimationValue: Float,
+    diagonal: Float,
+    isStaringFromReverse: Boolean
 ): Offset {
     // We will first pick a random point inside the screen and
     // move it outside of the screen by adding a factor of diagonal
     val randomXInGalaxy = planetCoefficientsData.coefficientX * drawScope.size.width
     val randomYInGalaxy = planetCoefficientsData.coefficientY * drawScope.size.height
 
-    val shiftValueX = shiftValue * sin(planetCoefficientsData.shiftAngle)
-    val shiftValueY = shiftValue * cos(planetCoefficientsData.shiftAngle)
+    val (shiftValueX, shiftValueY) = if (isStaringFromReverse) {
+        // Animate from the end point to the starting point
+        Pair(
+            diagonal * (shiftAnimationValue - 1) * -sin(planetCoefficientsData.shiftAngle),
+            diagonal * (shiftAnimationValue - 1) * -cos(planetCoefficientsData.shiftAngle)
+        )
+    } else {
+        // Animate from the starting point to the end point
+        Pair(
+            diagonal * shiftAnimationValue * sin(planetCoefficientsData.shiftAngle),
+            diagonal * shiftAnimationValue * cos(planetCoefficientsData.shiftAngle)
+        )
+    }
 
     return Offset(
         x = randomXInGalaxy + shiftValueX,

@@ -14,11 +14,16 @@ data class PlanetData(
 )
 
 private const val DefaultMaxPlanetRadius = 10f
-private const val DefaultNumberOfPlanet = 200
+private const val DefaultNumberOfPlanet = 100
 private const val DefaultMaxPlanetAlpha = 0.5f
+
 private val DefaultPlanetColors = listOf(
     Color.LightGray,
     Color.Gray,
     Color.DarkGray
 )
-private val DefaultTweenSpec = TweenSpec<Float>(durationMillis = 30000, easing = LinearEasing)
+
+private val DefaultTweenSpec = TweenSpec<Float>(
+    durationMillis = 30000,
+    easing = LinearEasing
+)
