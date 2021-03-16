@@ -195,36 +195,6 @@ private fun drawStar(
     )
 }
 
-//private fun test(
-//    drawScope: DrawScope,
-//    sideLength: Float,
-//    numberOfEdges: Int,
-//    interiorAngle: Float,
-//    startOffset: Offset,
-//    fillColor: Color
-//) {
-//    var firstPoint = startOffset.copy()
-//
-//    for (i in (0 until numberOfEdges)) {
-//        val rotationAngleInRadians = Math.toRadians(
-//            i * interiorAngle.toDouble()
-//        ).toFloat()
-//
-//        val secondPoint = Offset(
-//            x = firstPoint.x + sideLength * sin(rotationAngleInRadians),
-//            y = firstPoint.y + sideLength * cos(rotationAngleInRadians)
-//        )
-//
-//        drawScope.drawLine(
-//            start = firstPoint,
-//            end = secondPoint,
-//            color = fillColor
-//        )
-//
-//        firstPoint = secondPoint
-//    }
-//}
-
 private fun getRandomPointOutsideGalaxy(
     drawScope: DrawScope,
     planetCoefficientsData: PlanetCoefficientsData,
