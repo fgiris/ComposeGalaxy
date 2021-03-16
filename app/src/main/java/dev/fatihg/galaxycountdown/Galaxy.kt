@@ -48,14 +48,24 @@ fun Galaxy(
         )
     )
 
+    val starAlphaAnimation = infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = starData.starShiningAnimationSpec,
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
     Canvas(
         modifier = modifier,
         onDraw = {
             drawGalaxy(
                 drawScope = this,
                 planetRandomizers = planetRandomizers,
+                planetShiftAnimationValue = planetShiftAnimation.value,
                 starRandomizers = starRandomizers,
-                shiftAnimationValue = planetShiftAnimation.value
+                starAlphaAnimationValue = starAlphaAnimation.value
             )
         }
     )
@@ -64,8 +74,9 @@ fun Galaxy(
 private fun drawGalaxy(
     drawScope: DrawScope,
     planetRandomizers: List<PlanetRandomizer>,
+    planetShiftAnimationValue: Float,
     starRandomizers: List<StarRandomizer>,
-    shiftAnimationValue: Float
+    starAlphaAnimationValue: Float
 ) {
     val diagonal = hypot(drawScope.size.width, drawScope.size.height)
 
@@ -76,7 +87,7 @@ private fun drawGalaxy(
             center = getRandomPointOutsideGalaxy(
                 drawScope = drawScope,
                 planetCoefficientsData = planetRandomizer.planetCoefficientsData,
-                shiftAnimationValue = shiftAnimationValue,
+                shiftAnimationValue = planetShiftAnimationValue,
                 diagonal = diagonal,
                 // Half is starting from reverse the other half is not
                 isStaringFromReverse = index < (planetRandomizers.size / 2)
@@ -91,14 +102,15 @@ private fun drawGalaxy(
     starRandomizers.forEach {
         drawStar(
             drawScope = drawScope,
-            sideLength = it.starCoefficientsData.sideLengthCoefficient * 8f,
+            sideLength = it.starCoefficientsData.sideLengthCoefficient * 7f,
             numberOfEdges = (it.starCoefficientsData.edgeNumberCoefficient * 10).toInt(),
             interiorAngle = it.starCoefficientsData.interiorAngleCoefficient * 90f,
             startOffset = Offset(
                 x = it.starCoefficientsData.startPointXCoefficient * drawScope.size.width,
                 y = it.starCoefficientsData.startPointYCoefficient * drawScope.size.height
             ),
-            fillColor = it.color
+            fillColor = it.color,
+            alpha = it.starCoefficientsData.shiningAnimationCoefficient * starAlphaAnimationValue
         )
     }
 }
@@ -124,7 +136,8 @@ private fun drawStar(
     numberOfEdges: Int,
     interiorAngle: Float,
     startOffset: Offset,
-    fillColor: Color
+    fillColor: Color,
+    alpha: Float
 ) {
     // Move to the start offset
     val starPath = Path().also {
@@ -175,7 +188,11 @@ private fun drawStar(
         firstPoint = thirdPoint
     }
 
-    drawScope.drawPath(starPath, fillColor)
+    drawScope.drawPath(
+        path = starPath,
+        color = fillColor,
+        alpha = alpha
+    )
 }
 
 //private fun test(
@@ -390,7 +407,8 @@ data class StarRandomizer(
         startPointYCoefficient = (0..100).random() / 100f,
         sideLengthCoefficient = (0..100).random() / 100f,
         edgeNumberCoefficient = (0..100).random() / 100f,
-        interiorAngleCoefficient = (0..100).random() / 100f
+        interiorAngleCoefficient = (0..100).random() / 100f,
+        shiningAnimationCoefficient = (0..100).random() / 100f
     )
 
     val color = starData.starColors.random()
@@ -401,5 +419,6 @@ data class StarCoefficientsData(
     val startPointYCoefficient: Float,
     val sideLengthCoefficient: Float,
     val edgeNumberCoefficient: Float,
-    val interiorAngleCoefficient: Float
+    val interiorAngleCoefficient: Float,
+    val shiningAnimationCoefficient: Float
 )

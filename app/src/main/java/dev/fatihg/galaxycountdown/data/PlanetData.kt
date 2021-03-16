@@ -13,8 +13,8 @@ data class PlanetData(
     val planetAnimationSpec: DurationBasedAnimationSpec<Float> = DefaultTweenSpec
 )
 
-private const val DefaultMaxPlanetRadius = 10f
-private const val DefaultNumberOfPlanet = 100
+private const val DefaultMaxPlanetRadius = 5f
+private const val DefaultNumberOfPlanet = 200
 private const val DefaultMaxPlanetAlpha = 0.5f
 
 private val DefaultPlanetColors = listOf(
